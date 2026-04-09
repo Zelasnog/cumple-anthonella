@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CUMPLE ANTHO</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg1: #090014;
+      --bg2: #140022;
+      --pink: #ff4fd8;
+      --pink-soft: #ff92ea;
+      --pink-glow: rgba(255,79,216,.55);
+      --white: #fff8ff;
+    }
+
+    body {
+      overflow: hidden;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,79,216,.18), transparent 20%),
+        radial-gradient(circle at 80% 30%, rgba(255,255,255,.08), transparent 18%),
+        linear-gradient(180deg, var(--bg2), var(--bg1));
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      color: var(--white);
+    }
+
+    canvas, .stars, .raccoons, .floating-hearts {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .stars::before, .stars::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.9) 1px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,150,230,.6) 1px, transparent 1.5px);
+      background-size: 120px 120px, 180px 180px;
+      background-position: 10px 30px, 60px 90px;
+      opacity: .65;
+      animation: twinkle 6s linear infinite;
+    }
+
+    .stars::after { animation-direction: reverse; opacity: .35; }
+
+    .scene {
+      position: relative;
+      z-index: 2;
+      width: min(92vw, 1100px);
+      height: min(88vh, 900px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .message-wrap {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      gap: 18px;
+      z-index: 4;
+      transition: opacity 1.2s ease, transform 1.2s ease;
+    }
+
+    .main-name {
+      font-size: clamp(40px, 7vw, 82px);
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: var(--pink);
+      text-shadow: 0 0 20px var(--pink-glow), 0 0 45px rgba(255,79,216,.25);
+      animation: pulse 1.8s infinite ease-in-out;
+      padding: 0 20px;
+    }
+
+    .sub-message {
+      min-height: 32px;
+      font-size: clamp(18px, 2.5vw, 30px);
+      color: var(--white);
+      text-shadow: 0 0 12px rgba(255,255,255,.18);
+      padding: 0 24px;
+    }
+
+    .hint {
+      font-size: clamp(12px, 1.5vw, 15px);
+      opacity: .76;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .heart-stage {
+      position: relative;
+      width: min(86vw, 760px);
+      height: min(78vw, 700px);
+      opacity: 0;
+      transform: scale(.72);
+      transition: opacity 1.5s ease, transform 1.5s cubic-bezier(.22,1,.36,1);
+      z-index: 3;
+    }
+
+    .heart-stage.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .message-wrap.hide {
+      opacity: 0;
+      transform: scale(.8);
+    }
+
+    .photo-card {
+      position: absolute;
+      width: clamp(64px, 9vw, 100px);
+      height: clamp(64px, 9vw, 100px);
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgba(255,255,255,.08);
+      border: 3px solid rgba(255,255,255,.94);
+      box-shadow:
+        0 0 0 4px rgba(255,79,216,.12),
+        0 0 24px rgba(255,79,216,.48),
+        0 16px 30px rgba(0,0,0,.28);
+      transform: translate(-50%, -50%) scale(.2) rotate(var(--rot));
+      left: 50%;
+      top: 50%;
+      opacity: 0;
+      animation: settle 1.5s cubic-bezier(.2,.9,.2,1) forwards;
+      animation-delay: var(--delay);
+    }
+
+    .photo-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 22px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+      pointer-events: none;
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: saturate(1.05) contrast(1.04);
+    }
+
+    .heart-stage .mini-heart {
+      position: absolute;
+      font-size: clamp(14px, 2vw, 22px);
+      color: #ff75de;
+      text-shadow: 0 0 12px rgba(255,79,216,.7);
+      animation: floatHeart 2.8s ease-in-out infinite;
+      left: var(--x);
+      top: var(--y);
+      opacity: .95;
+    }
+
+    .raccoons span {
+      position: absolute;
+      top: -10vh;
+      font-size: clamp(18px, 3vw, 34px);
+      filter: drop-shadow(0 0 8px rgba(255,255,255,.15));
+      animation: raccoonFall linear infinite;
+      opacity: .9;
+      user-select: none;
+    }
+
+    .floating-hearts span {
+      position: absolute;
+      bottom: -30px;
+      font-size: clamp(14px, 2vw, 24px);
+      color: #ff78df;
+      animation: riseHeart linear infinite;
+      opacity: .7;
+    }
+
+    .qr-center {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 4px solid rgba(255,255,255,.95);
+  box-shadow:
+    0 0 25px rgba(255,79,216,.6),
+    0 0 45px rgba(255,79,216,.25),
+    0 12px 30px rgba(0,0,0,.35);
+  z-index: 5;
+  background: white;
+  animation: pulseQR 2s infinite ease-in-out;
+}
+
+.qr-center img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes pulseQR {
+  0%,100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.06); }
+}
+
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    @keyframes twinkle {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+      100% { transform: translateY(0px); }
+    }
+
+    @keyframes settle {
+      0% {
+        opacity: 0;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%) scale(.2) rotate(calc(var(--rot) * -1));
+      }
+      68% {
+        opacity: 1;
+        left: var(--x);
+        top: var(--y);
+        transform: translate(-50%, -50%) scale(1.08) rotate(var(--rot));
+      }
+      100% {
+        opacity: 1;
+        left: var(--x);
+        top: var(--y);
+        transform: translate(-50%, -50%) scale(1) rotate(var(--rot));
+      }
+    }
+
+    @keyframes raccoonFall {
+      0% { transform: translateY(-12vh) rotate(0deg) translateX(0); }
+      100% { transform: translateY(120vh) rotate(360deg) translateX(30px); }
+    }
+
+    @keyframes riseHeart {
+      0% { transform: translateY(0) scale(.8); opacity: 0; }
+      20% { opacity: .85; }
+      100% { transform: translateY(-115vh) scale(1.2); opacity: 0; }
+    }
+
+    @keyframes floatHeart {
+      0%,100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-8px) scale(1.1); }
+    }
+
+    @media (max-width: 700px) {
+      .scene { height: 100vh; }
+      .heart-stage { width: 94vw; height: 84vw; }
+      .photo-card { border-radius: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrix"></canvas>
+  <div class="stars"></div>
+  <div class="raccoons" id="raccoons"></div>
+  <div class="floating-hearts" id="floatingHearts"></div>
+
+  <div class="scene">
+    <div class="message-wrap" id="messageWrap">
+      <div class="main-name" id="changingText">ANTHONELLA</div>
+      <div class="sub-message" id="subMessage">Feliz cumpleaños mi amor 🎂</div>
+    </div>
+
+    <div class="heart-stage" id="heartStage">
+  <a href="https://tu-link-aqui.com" target="_blank" class="qr-center">
+    <img src="./img/qr.png" alt="Código QR">
+  </a>
+</div>
+
+  <script>
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    const chars = '01♥♡FELIZCUMPLEAÑOSANTHONELLA'.split('');
+    const fontSize = 14;
+    let columns, drops;
+
+    function setupMatrix() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      columns = Math.floor(window.innerWidth / fontSize);
+      drops = Array(columns).fill(1);
+    }
+
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(10,0,20,0.12)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ff4fd8';
+      ctx.font = fontSize + 'px monospace';
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    }
+
+    setupMatrix();
+    window.addEventListener('resize', setupMatrix);
+    setInterval(drawMatrix, 40);
+
+    const names = [
+      'ANTHO ❤️',
+      'Eres mi persona favorita 💖',
+      'Feliz cumpleaños mi amor 🎂',
+      'Gracias por existir ✨',
+      'Te amo muchísimo ❤️'
+    ];
+    const subMessages = [
+      'Hoy todo brilla por ti ✨',
+      'Mi lugar favorito siempre eres tú 💞',
+      'Que este día te abrace bonito 🎀',
+      'Te mereces un universo de cosas lindas 🌙',
+      'Anto, mi corazón es tuyo hoy y siempre 💘'
+    ];
+
+    let index = 0;
+    setInterval(() => {
+      index = (index + 1) % names.length;
+      document.getElementById('changingText').textContent = names[index];
+      document.getElementById('subMessage').textContent = subMessages[index];
+    }, 2200);
+
+    const heartStage = document.getElementById('heartStage');
+    const photoSources = [
+    './img/img1.jpg',
+    './img/img2.jpg',
+    './img/img3.jpg',
+    './img/img4.jpg',
+    './img/img5.jpg',
+    './img/img6.jpg',
+    './img/img7.jpg',
+    './img/img8.jpg',
+    './img/img9.jpg',
+    './img/img10.jpg',
+    './img/img11.jpg',
+    './img/img12.jpg',
+    './img/img13.jpg',
+    './img/img14.jpg',
+    './img/img15.jpg',
+    './img/img16.jpg'
+];
+    function heartPoint(t) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+      return { x, y };
+    }
+
+    function buildHeartPhotos() {
+      const total = 18;
+      const points = [];
+      for (let i = 0; i < total; i++) {
+        const t = (Math.PI * 2 * i) / total;
+        points.push(heartPoint(t));
+      }
+
+      const xs = points.map(p => p.x);
+      const ys = points.map(p => p.y);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const width = maxX - minX;
+      const height = maxY - minY;
+
+      points.forEach((p, i) => {
+        const card = document.createElement('div');
+        card.className = 'photo-card';
+        const xPct = 10 + ((p.x - minX) / width) * 80;
+        const yPct = 8 + ((p.y - minY) / height) * 82;
+        const rot = (-14 + Math.random() * 28).toFixed(2) + 'deg';
+        const delay = (i * 0.12).toFixed(2) + 's';
+        card.style.setProperty('--x', xPct + '%');
+        card.style.setProperty('--y', yPct + '%');
+        card.style.setProperty('--rot', rot);
+        card.style.setProperty('--delay', delay);
+        card.innerHTML = `<img src="${photoSources[i % photoSources.length]}" alt="foto decorativa ${i + 1}">`;
+        heartStage.appendChild(card);
+      });
+
+      const miniHearts = [
+        ['18%', '24%'], ['82%', '23%'], ['14%', '53%'], ['86%', '54%'], ['50%', '92%'], ['50%', '9%']
+      ];
+      miniHearts.forEach((pos, i) => {
+        const h = document.createElement('span');
+        h.className = 'mini-heart';
+        h.textContent = i % 2 === 0 ? '❤' : '♡';
+        h.style.setProperty('--x', pos[0]);
+        h.style.setProperty('--y', pos[1]);
+        h.style.animationDelay = `${i * 0.3}s`;
+        heartStage.appendChild(h);
+      });
+    }
+
+    buildHeartPhotos();
+
+    setTimeout(() => {
+      document.getElementById('messageWrap').classList.add('hide');
+      heartStage.classList.add('show');
+    }, 7800);
+
+    const raccoons = document.getElementById('raccoons');
+    const raccoonIcons = ['🦝','🦝','🦝','✨🦝'];
+    for (let i = 0; i < 18; i++) {
+      const r = document.createElement('span');
+      r.textContent = raccoonIcons[i % raccoonIcons.length];
+      r.style.left = (Math.random() * 100) + 'vw';
+      r.style.animationDuration = (8 + Math.random() * 9) + 's';
+      r.style.animationDelay = (-Math.random() * 12) + 's';
+      r.style.opacity = 0.45 + Math.random() * 0.5;
+      raccoons.appendChild(r);
+    }
+
+    const floatingHearts = document.getElementById('floatingHearts');
+    for (let i = 0; i < 16; i++) {
+      const h = document.createElement('span');
+      h.textContent = i % 2 === 0 ? '❤' : '♡';
+      h.style.left = (Math.random() * 100) + 'vw';
+      h.style.animationDuration = (8 + Math.random() * 7) + 's';
+      h.style.animationDelay = (-Math.random() * 12) + 's';
+      floatingHearts.appendChild(h);
+    }
+  </script>
+</body>
+</html>
